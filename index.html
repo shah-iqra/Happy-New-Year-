@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magical New Year Celebration</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Great+Vibes&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at bottom, #1b2735 0%, #090a0f 100%);
+            height: 100vh;
+            color: white;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* --- FIREWORKS CANVAS --- */
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* --- TEXT STYLES --- */
+        .content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 100;
+            pointer-events: none; /* Clicks pass through */
+            width: 100%;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 12vw;
+            margin: 0;
+            line-height: 1;
+            background: linear-gradient(to bottom, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0px 0px 20px rgba(255, 255, 255, 0.5);
+            animation: textFloat 3s ease-in-out infinite;
+        }
+
+        p.sub-text {
+            font-family: 'Great Vibes', cursive;
+            font-size: 4vw;
+            color: #ff4d6d;
+            margin-top: -20px;
+            text-shadow: 0 0 10px #ff0055, 0 0 20px #ff0055;
+            opacity: 0;
+            animation: fadeInUp 2s ease forwards 1s;
+        }
+
+        /* --- GUIDE TEXT (Click anywhere...) --- */
+        .guide {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            font-size: 16px;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.7);
+            z-index: 101;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; text-shadow: 0 0 10px rgba(255,255,255,0.8); }
+        }
+
+        @keyframes textFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes fadeInUp {
+            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(20px); }
+        }
+
+        /* --- CITY SKYLINE --- */
+        .city {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 15vh;
+            background-image: url('https://i.imgur.com/8Yl1a0v.png');
+            background-size: cover;
+            background-position: center bottom;
+            opacity: 0.6;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* --- BALLOON STYLES --- */
+        .balloon {
+            position: absolute;
+            bottom: -100px;
+            width: 40px;
+            height: 50px;
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            z-index: 5;
+            animation: floatUp 15s linear forwards;
+            opacity: 0.9;
+            box-shadow: inset -5px -5px 10px rgba(0,0,0,0.1);
+        }
+        .balloon::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 30px;
+            background: rgba(255,255,255,0.5);
+        }
+
+        /* --- LANTERN (FANUSH) STYLES --- */
+        .lantern {
+            position: absolute;
+            bottom: -100px;
+            width: 40px;
+            height: 60px;
+            background: linear-gradient(to top, #ff3300, #ffcc00);
+            border-radius: 10px 10px 5px 5px;
+            z-index: 6;
+            animation: floatUpLantern 20s linear forwards;
+            box-shadow: 0 0 20px #ff6600, 0 0 40px #ff9900;
+            opacity: 0.8;
+        }
+        
+        @keyframes floatUp {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.9; }
+            100% { transform: translateY(-120vh) rotate(20deg); opacity: 0; }
+        }
+
+        @keyframes floatUpLantern {
+            0% { transform: translateY(0) scale(0.8); opacity: 0; }
+            20% { opacity: 0.8; }
+            100% { transform: translateY(-130vh) scale(0.5); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="city"></div>
+
+    <div class="content">
+        <h1>2026</h1>
+        <p class="sub-text">Happy New Year</p>
+    </div>
+
+    <div class="guide">✨ Click anywhere to celebrate! ✨</div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // --- PART 1: FIREWORKS LOGIC ---
+        window.requestAnimFrame = (function() {
+            return window.requestAnimationFrame || function(callback) { window.setTimeout(callback, 1000 / 60); };
+        })();
+
+        var canvas = document.getElementById('canvas'),
+            ctx = canvas.getContext('2d'),
+            cw = window.innerWidth,
+            ch = window.innerHeight,
+            fireworks = [],
+            particles = [],
+            hue = 120,
+            timerTotal = 80,
+            timerTick = 0,
+            mousedown = false,
+            mx, my;
+
+        canvas.width = cw;
+        canvas.height = ch;
+
+        function random(min, max) { return Math.random() * (max - min) + min; }
+        function calculateDistance(p1x, p1y, p2x, p2y) {
+            return Math.sqrt(Math.pow(p1x - p2x, 2) + Math.pow(p1y - p2y, 2));
+        }
+
+        function Firework(sx, sy, tx, ty) {
+            this.x = sx; this.y = sy; this.sx = sx; this.sy = sy;
+            this.tx = tx; this.ty = ty;
+            this.distanceToTarget = calculateDistance(sx, sy, tx, ty);
+            this.distanceTraveled = 0;
+            this.coordinates = [];
+            this.coordinateCount = 3;
+            while (this.coordinateCount--) { this.coordinates.push([this.x, this.y]); }
+            this.angle = Math.atan2(ty - sy, tx - sx);
+            this.speed = 2;
+            this.acceleration = 1.05;
+            this.brightness = random(50, 70);
+            this.targetRadius = 1;
+        }
+
+        Firework.prototype.update = function(index) {
+            this.coordinates.pop();
+            this.coordinates.unshift([this.x, this.y]);
+            if (this.targetRadius < 8) this.targetRadius += 0.3; else this.targetRadius = 1;
+            this.speed *= this.acceleration;
+            var vx = Math.cos(this.angle) * this.speed, vy = Math.sin(this.angle) * this.speed;
+            this.distanceTraveled = calculateDistance(this.sx, this.sy, this.x + vx, this.y + vy);
+            if (this.distanceTraveled >= this.distanceToTarget) {
+                createParticles(this.tx, this.ty);
+                fireworks.splice(index, 1);
+            } else { this.x += vx; this.y += vy; }
+        }
+
+        Firework.prototype.draw = function() {
+            ctx.beginPath();
+            ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+            ctx.lineTo(this.x, this.y);
+            ctx.strokeStyle = 'hsl(' + hue + ', 100%, ' + this.brightness + '%)';
+            ctx.stroke();
+        }
+
+        function Particle(x, y) {
+            this.x = x; this.y = y;
+            this.coordinates = [];
+            this.coordinateCount = 5;
+            while (this.coordinateCount--) { this.coordinates.push([this.x, this.y]); }
+            this.angle = random(0, Math.PI * 2);
+            this.speed = random(1, 10);
+            this.friction = 0.95;
+            this.gravity = 1;
+            this.hue = random(hue - 20, hue + 20);
+            this.brightness = random(50, 80);
+            this.alpha = 1;
+            this.decay = random(0.015, 0.03);
+        }
+
+        Particle.prototype.update = function(index) {
+            this.coordinates.pop();
+            this.coordinates.unshift([this.x, this.y]);
+            this.speed *= this.friction;
+            this.x += Math.cos(this.angle) * this.speed;
+            this.y += Math.sin(this.angle) * this.speed + this.gravity;
+            this.alpha -= this.decay;
+            if (this.alpha <= this.decay) particles.splice(index, 1);
+        }
+
+        Particle.prototype.draw = function() {
+            ctx.beginPath();
+            ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+            ctx.lineTo(this.x, this.y);
+            ctx.strokeStyle = 'hsla(' + this.hue + ', 100%, ' + this.brightness + '%, ' + this.alpha + ')';
+            ctx.stroke();
+        }
+
+        function createParticles(x, y) {
+            var particleCount = 30;
+            while (particleCount--) { particles.push(new Particle(x, y)); }
+        }
+
+        function loop() {
+            requestAnimFrame(loop);
+            hue += 0.5;
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, cw, ch);
+            ctx.globalCompositeOperation = 'lighter';
+
+            var i = fireworks.length; while (i--) { fireworks[i].draw(); fireworks[i].update(i); }
+            var i = particles.length; while (i--) { particles[i].draw(); particles[i].update(i); }
+
+            if (timerTick >= timerTotal) {
+                if (!mousedown) {
+                    fireworks.push(new Firework(cw / 2, ch, random(0, cw), random(0, ch / 2)));
+                    timerTick = 0;
+                }
+            } else { timerTick++; }
+
+            if (mousedown) { fireworks.push(new Firework(cw / 2, ch, mx, my)); }
+        }
+
+        canvas.addEventListener('mousemove', function(e) { mx = e.pageX - canvas.offsetLeft; my = e.pageY - canvas.offsetTop; });
+        canvas.addEventListener('mousedown', function(e) { e.preventDefault(); mousedown = true; });
+        canvas.addEventListener('mouseup', function(e) { e.preventDefault(); mousedown = false; });
+        canvas.addEventListener('touchstart', function(e) { e.preventDefault(); mx = e.touches[0].pageX - canvas.offsetLeft; my = e.touches[0].pageY - canvas.offsetTop; mousedown = true; });
+        canvas.addEventListener('touchend', function(e) { e.preventDefault(); mousedown = false; });
+        window.onload = loop;
+        window.addEventListener('resize', function() { cw = window.innerWidth; ch = window.innerHeight; canvas.width = cw; canvas.height = ch; });
+
+
+        // --- PART 2: BALLOONS & LANTERNS LOGIC ---
+
+        function createBalloon() {
+            const balloon = document.createElement('div');
+            balloon.classList.add('balloon');
+            balloon.style.left = Math.random() * 100 + 'vw';
+            const colors = ['#ff4d6d', '#3498db', '#e67e22', '#9b59b6', '#2ecc71', '#f1c40f'];
+            balloon.style.background = `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), ${colors[Math.floor(Math.random() * colors.length)]})`;
+            balloon.style.animationDuration = (Math.random() * 5 + 10) + 's'; 
+            document.body.appendChild(balloon);
+            setTimeout(() => { balloon.remove(); }, 15000);
+        }
+
+        function createLantern() {
+            const lantern = document.createElement('div');
+            lantern.classList.add('lantern');
+            lantern.style.left = Math.random() * 100 + 'vw';
+            lantern.style.animationDuration = (Math.random() * 10 + 15) + 's';
+            document.body.appendChild(lantern);
+            setTimeout(() => { lantern.remove(); }, 25000);
+        }
+
+        setInterval(createBalloon, 800);
+        setInterval(createLantern, 2000);
+
+    </script>
+</body>
+</html>
